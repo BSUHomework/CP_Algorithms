@@ -6,543 +6,335 @@
 
 线段树维护的信息，需要满足可加性，即能以可以接受的速度合并信息和修改信息，包括在使用懒惰标记时，标记也要满足可加性（例如取模就不满足可加性，对 $4$ 取模然后对 $3$ 取模，两个操作就不能合并在一起做）。
 
-## 线段树
-
-### 线段树的基本结构与建树
-
-线段树将每个长度不为 $1$ 的区间划分成左右两个区间递归求解，把整个线段划分为一个树形结构，通过合并左右两区间信息来求得该区间的信息。这种数据结构可以方便的进行大部分的区间操作。
-
-有个大小为 $5$ 的数组 $a={10,11,12,13,14}$ ，要将其转化为线段树，有以下做法：设线段树的根节点编号为 $1$ ，用数组 $d$ 来保存我们的线段树， $d_i$ 用来保存线段树上编号为 $i$ 的节点的值（这里每个节点所维护的值就是这个节点所表示的区间总和），如图所示：
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt1.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt1.png)
-
-图中 $d_1$ 表示根节点，紫色方框是数组 $a$ ，红色方框是数组 $d$ ，红色方框中的括号中的黄色数字表示它所在的那个红色方框表示的线段树节点所表示的区间，如 $d_1$ 所表示的区间就是 $[1,5]$ （ $a_1,a_2, \cdots ,a_5$ ），即 $d_1$ 所保存的值是 $a_1+a_2+ \cdots +a_5$ ， $d_1=60$ 表示的是 $a_1+a_2+ \cdots +a_5=60$ 。
-
-通过观察不难发现， $d_i$ 的左儿子节点就是 $d_{2\times i}$ ， $d_i$ 的右儿子节点就是 $d_{2\times i+1}$ 。如果 $d_i$ 表示的是区间 $[s,t]$ （即 $d_i=a_s+a_{s+1}+ \cdots +a_t$ ) 的话，那么 $d_i$ 的左儿子节点表示的是区间 $[ s, \frac{s+t}{2} ]$ ， $d_i$ 的右儿子表示的是区间 $[ \frac{s+t}{2} +1,t ]$ 。
-
-具体要怎么用代码实现呢？
-
-我们继续观察，有没有发现如果 $d_i$ 表示的区间大小等于 $1$ 的话（区间大小指的是区间包含的元素的个数，即 $a$ 的个数。设 $d_j$ 表示区间 $[s,t]$ ，它的区间大小就是 $t-s+1$ ），那么 $d_i$ 所表示的区间 $[s,t]$ 中肯定有 $s=t$ ，且 $d_i=a_s=a_t$ 。这就是线段树的递归边界。
-
-**思路如下：**
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt2.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt2.png)
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt3.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt3.png)
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt4.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt4.png)
-
-此处给出 C++ 的代码实现，可参考注释理解：
-
-```
-void build(int s, int t, int p) {
-  // 对 [s,t] 区间建立线段树,当前根的编号为 p
-  if (s == t) {
-    d[p] = a[s];
-    return;
-  }
-  int m = (s + t) / 2;
-  build(s, m, p * 2), build(m + 1, t, p * 2 + 1);
-  // 递归对左右区间建树
-  d[p] = d[p * 2] + d[(p * 2) + 1];
-}
-```
-
-关于线段树的空间：如果采用堆式存储（ $2p$ 是 $p$ 的左儿子， $2p+1$ 是 $p$ 的右儿子），若有 $n$ 个叶子结点，则 d 数组的范围最大为 $2^{\left\lceil\log{n}\right\rceil+1}$ 。
-
-分析：容易知道线段树的深度是 $\left\lceil\log{n}\right\rceil$ 的，则在堆式储存情况下叶子节点（包括无用的叶子节点）数量为 $2^{\left\lceil\log{n}\right\rceil}$ 个，又由于其为一棵完全二叉树，则其总节点个数 $2^{\left\lceil\log{n}\right\rceil+1}-1$ 。当然如果你懒得计算的话可以直接把数组长度设为 $4n$ ，因为 $\frac{2^{\left\lceil\log{n}\right\rceil+1}-1}{n}$ 的最大值在 $n=2^{x}+1(x\in N_{+})$ 时取到，此时节点数为 $2^{\left\lceil\log{n}\right\rceil+1}-1=2^{x+2}-1=4n-5$ 。
-
-### 线段树的区间查询
-
-区间查询，比如求区间 $[l,r]$ 的总和（即 $a_l+a_{l+1}+ \cdots +a_r$ ）、求区间最大值/最小值等操作。
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt5.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt5.png)
-
-以上面这张图为例，如果要查询区间 $[1,5]$ 的和，那直接获取 $d_1$ 的值（ $60$ ）即可。
-
-如果要查询的区间为 $[3,5]$ ，此时就不能直接获取区间的值，但是 $[3,5]$ 可以拆成 $[3,3]$ 和 $[4,5]$ ，可以通过合并这两个区间的答案来求得这个区间的答案。
-
-一般地，如果要查询的区间是 $[l,r]$ ，则可以将其拆成最多为 $O(\log n)$ 个 **极大** 的区间，合并这些区间即可求出 $[l,r]$ 的答案。
-
-此处给出 C++ 的代码实现，可参考注释理解：
-
-```
-int getsum(int l, int r, int s, int t, int p) {
-  // [l,r] 为查询区间,[s,t] 为当前节点包含的区间,p 为当前节点的编号
-  if (l <= s && t <= r)
-    return d[p];  // 当前区间为询问区间的子集时直接返回当前区间的和
-  int m = (s + t) / 2, sum = 0;
-  if (l <= m) sum += getsum(l, r, s, m, p * 2);
-  // 如果左儿子代表的区间 [l,m] 与询问区间有交集,则递归查询左儿子
-  if (r > m) sum += getsum(l, r, m + 1, t, p * 2 + 1);
-  // 如果右儿子代表的区间 [m+1,r] 与询问区间有交集,则递归查询右儿子
-  return sum;
-}
-```
-
-### 线段树的区间修改与懒惰标记
-
-如果要求修改区间 $[l,r]$ ，把所有包含在区间 $[l,r]$ 中的节点都遍历一次、修改一次，时间复杂度无法承受。我们这里要引入一个叫做 **「懒惰标记」** 的东西。
-
-我们设一个数组 $b$ ， $b_i$ 表示编号为 $i$ 的节点的懒惰标记值。为了加强对懒惰标记的理解，此处举个例子：
-
-> A 有两个儿子，一个是 B，一个是 C。
->
-> 有一天 A 要建一个新房子，没钱。刚好过年嘛，有人要给 B 和 C 红包，两个红包的钱数相同都是 $1$ 元，然而因为 A 是父亲所以红包肯定是先塞给 A 咯~
->
-> 理论上来讲 A 应该把两个红包分别给 B 和 C，但是……缺钱嘛，A 就把红包偷偷收到自己口袋里了。
->
-> A 高兴地说：「我现在有 $2$ 份红包了！我又多了 $2\times 1=2$ 元了！哈哈哈~」
->
-> 但是 A 知道，如果他不把红包给 B 和 C，那 B 和 C 肯定会不爽然后导致家庭矛盾最后崩溃，所以 A 对儿子 B 和 C 说：「我欠你们每人 $1$ 份 $1$ 元的红包，下次有新红包给过来的时候再给你们！这里我先做下记录……嗯……我欠你们各 $1$ 元……」
->
-> 儿子 B、C 有点恼怒：「可是如果有同学问起我们我们收到了多少红包咋办？你把我们的红包都收了，我们还怎么装？」
->
-> 父亲 A 赶忙说：「有同学问起来我就会给你们的！我欠条都写好了不会不算话的！」
->
-> 这样 B、C 才放了心。
-
-在这个故事中我们不难看出，A 就是父亲节点，B 和 C 是 A 的儿子节点，而且 B 和 C 是叶子节点，分别对应一个数组中的值（就是之前讲的数组 $a$ ），我们假设节点 A 表示区间 $[1,2]$ （即 $a_1+a_2$ ），节点 B 表示区间 $[1,1]$ （即 $a_1$ ），节点 C 表示区间 $[2,2]$ （即 $a_2$ ），它们的初始值都为 $0$ （现在才刚开始呢，还没拿到红包，所以都没钱）。
-
-如图：
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt6.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt6.png)
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt7.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt7.png)
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt8.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt8.png)
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt9.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt9.png)
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt10.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt10.png)
-
-注：这里 D 表示当前节点的值（即所表示区间的区间和）。 为什么节点 A 的 D 是 $2\times 1=2$ 呢？原因很简单：节点 A 表示的区间是 $[1,2]$ ，一共包含 $2$ 个元素。我们是让 $[1,2]$ 这个区间的每个元素都加上 $1$ ，所以节点 A 的值就加上了 $2\times 1=2$ 咯。
-
-如果这时候我们要查询区间 $[1,1]$ （即节点 B 的值），A 就把它欠的还给 B，此时的操作称为 **下传懒惰标记** 。
-
-具体是这样操作（如图）：
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt11.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt11.png)
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt12.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt12.png)
-
-注：为什么是加上 $1\times 1=1$ 呢？因为 B 和 C 表示的区间中只有 $1$ 个元素。
-
-[![img](https://github.com/OI-wiki/OI-wiki/raw/master/docs/ds/images/segt13.png)](https://github.com/OI-wiki/OI-wiki/blob/master/docs/ds/images/segt13.png)
-
-由此我们可以得到，区间 $[1,1]$ 的区间和就是 $1$ 。
-
-区间修改（区间加上某个值）：
-
-```
-void update(int l, int r, int c, int s, int t, int p) {
-  // [l,r] 为修改区间,c 为被修改的元素的变化量,[s,t] 为当前节点包含的区间,p
-  // 为当前节点的编号
-  if (l <= s && t <= r) {
-    d[p] += (t - s + 1) * c, b[p] += c;
-    return;
-  }  // 当前区间为修改区间的子集时直接修改当前节点的值,然后打标记,结束修改
-  int m = (s + t) / 2;
-  if (b[p] && s != t) {
-    // 如果当前节点的懒标记非空,则更新当前节点两个子节点的值和懒标记值
-    d[p * 2] += b[p] * (m - s + 1), d[p * 2 + 1] += b[p] * (t - m);
-    b[p * 2] += b[p], b[p * 2 + 1] += b[p];  // 将标记下传给子节点
-    b[p] = 0;                                // 清空当前节点的标记
-  }
-  if (l <= m) update(l, r, c, s, m, p * 2);
-  if (r > m) update(l, r, c, m + 1, t, p * 2 + 1);
-  d[p] = d[p * 2] + d[p * 2 + 1];
-}
-```
-
-区间查询（区间求和）：
-
-```
-int getsum(int l, int r, int s, int t, int p) {
-  // [l,r] 为查询区间,[s,t] 为当前节点包含的区间,p为当前节点的编号
-  if (l <= s && t <= r) return d[p];
-  // 当前区间为询问区间的子集时直接返回当前区间的和
-  int m = (s + t) / 2;
-  if (b[p]) {
-    // 如果当前节点的懒标记非空,则更新当前节点两个子节点的值和懒标记值
-    d[p * 2] += b[p] * (m - s + 1), d[p * 2 + 1] += b[p] * (t - m),
-        b[p * 2] += b[p], b[p * 2 + 1] += b[p];  // 将标记下传给子节点
-    b[p] = 0;                                    // 清空当前节点的标记
-  }
-  int sum = 0;
-  if (l <= m) sum = getsum(l, r, s, m, p * 2);
-  if (r > m) sum += getsum(l, r, m + 1, t, p * 2 + 1);
-  return sum;
-}
-```
-
-如果你是要实现区间修改为某一个值而不是加上某一个值的话，代码如下：
-
-```
-void update(int l, int r, int c, int s, int t, int p) {
-  if (l <= s && t <= r) {
-    d[p] = (t - s + 1) * c, b[p] = c;
-    return;
-  }
-  int m = (s + t) / 2;
-  if (b[p]) {
-    d[p * 2] = b[p] * (m - s + 1), d[p * 2 + 1] = b[p] * (t - m),
-          b[p * 2] = b[p * 2 + 1] = b[p];
-    b[p] = 0;
-  }
-  if (l <= m) update(l, r, c, s, m, p * 2);
-  if (r > m) update(l, r, c, m + 1, t, p * 2 + 1);
-  d[p] = d[p * 2] + d[p * 2 + 1];
-}
-int getsum(int l, int r, int s, int t, int p) {
-  if (l <= s && t <= r) return d[p];
-  int m = (s + t) / 2;
-  if (b[p]) {
-    d[p * 2] = b[p] * (m - s + 1), d[p * 2 + 1] = b[p] * (t - m),
-          b[p * 2] = b[p * 2 + 1] = b[p];
-    b[p] = 0;
-  }
-  int sum = 0;
-  if (l <= m) sum = getsum(l, r, s, m, p * 2);
-  if (r > m) sum += getsum(l, r, m + 1, t, p * 2 + 1);
-  return sum;
-}
-```
-
-## 一些优化
-
-这里总结几个线段树的优化：
-
-- 在叶子节点处无需下放懒惰标记，所以懒惰标记可以不下传到叶子节点。
-- 下放懒惰标记可以写一个专门的函数 `pushdown` ，从儿子节点更新当前节点也可以写一个专门的函数 `maintain` （或者对称地用 `pushup` ），降低代码编写难度。
-- 标记永久化，如果确定懒惰标记不会在中途被加到溢出（即超过了该类型数据所能表示的最大范围），那么就可以将标记永久化。标记永久化可以避免下传懒惰标记，只需在进行询问时把标记的影响加到答案当中，从而降低程序常数。具体如何处理与题目特性相关，需结合题目来写。这也是树套树和可持久化数据结构中会用到的一种技巧。
-
-## 线段树基础题推荐
-
-### [luogu P3372【模板】线段树 1](https://www.luogu.com.cn/problem/P3372)
-
-??? "参考代码" 
-
-```c++
-#include <iostream>
-typedef long long LL;
-LL n, a[100005], d[270000], b[270000];
-void build(LL l, LL r, LL p) {
-  if (l == r) {
-    d[p] = a[l];
-    return;
-  }
-  LL m = (l + r) >> 1;
-  build(l, m, p << 1), build(m + 1, r, (p << 1) | 1);
-  d[p] = d[p << 1] + d[(p << 1) | 1];
-}
-void update(LL l, LL r, LL c, LL s, LL t, LL p) {
-  if (l <= s && t <= r) {
-    d[p] += (t - s + 1) * c, b[p] += c;
-    return;
-  }
-  LL m = (s + t) >> 1;
-  if (b[p])
-    d[p << 1] += b[p] * (m - s + 1), d[(p << 1) | 1] += b[p] * (t - m),
-        b[p << 1] += b[p], b[(p << 1) | 1] += b[p];
-  b[p] = 0;
-  if (l <= m) update(l, r, c, s, m, p << 1);
-  if (r > m) update(l, r, c, m + 1, t, (p << 1) | 1);
-  d[p] = d[p << 1] + d[(p << 1) | 1];
-}
-LL getsum(LL l, LL r, LL s, LL t, LL p) {
-  if (l <= s && t <= r) return d[p];
-  LL m = (s + t) >> 1;
-  if (b[p])
-    d[p << 1] += b[p] * (m - s + 1), d[(p << 1) | 1] += b[p] * (t - m),
-        b[p << 1] += b[p], b[(p << 1) | 1] += b[p];
-  b[p] = 0;
-  LL sum = 0;
-  if (l <= m) sum = getsum(l, r, s, m, p << 1);
-  if (r > m) sum += getsum(l, r, m + 1, t, (p << 1) | 1);
-  return sum;
-}
-int main() {
-  std::ios::sync_with_stdio(0);
-  LL q, i1, i2, i3, i4;
-  std::cin >> n >> q;
-  for (LL i = 1; i <= n; i++) std::cin >> a[i];
-  build(1, n, 1);
-  while (q--) {
-    std::cin >> i1 >> i2 >> i3;
-    if (i1 == 2)
-      std::cout << getsum(i2, i3, 1, n, 1) << std::endl;
-    else
-      std::cin >> i4, update(i2, i3, i4, 1, n, 1);
-  }
-  return 0;
-}
-```
+## simplest from of a segment tree
 
 
 
-### [luogu P3373【模板】线段树 2](https://www.luogu.com.cn/problem/P3373)
+We have an array a[0…n−1], 
 
-??? "参考代码" 
+and the Segment Tree must be able to find the sum of elements between the indices ll and rr (i.e. computing the sum $∑_{ri}^l= a[i]$)
 
-```c++
-#include <cstdio>
-#define ll long long
-ll read() {
-  ll w = 1, q = 0;
-  char ch = ' ';
-  while (ch != '-' && (ch < '0' || ch > '9')) ch = getchar();
-  if (ch == '-') w = -1, ch = getchar();
-  while (ch >= '0' && ch <= '9') q = (ll)q * 10 + ch - '0', ch = getchar();
-  return (ll)w * q;
-}
-int n, m;
-ll mod;
-ll a[100005], sum[400005], mul[400005], laz[400005];
-void up(int i) { sum[i] = (sum[(i << 1)] + sum[(i << 1) | 1]) % mod; }
-void pd(int i, int s, int t) {
-  int l = (i << 1), r = (i << 1) | 1, mid = (s + t) >> 1;
-  if (mul[i] != 1) {
-    mul[l] *= mul[i];
-    mul[l] %= mod;
-    mul[r] *= mul[i];
-    mul[r] %= mod;
-    laz[l] *= mul[i];
-    laz[l] %= mod;
-    laz[r] *= mul[i];
-    laz[r] %= mod;
-    sum[l] *= mul[i];
-    sum[l] %= mod;
-    sum[r] *= mul[i];
-    sum[r] %= mod;
-    mul[i] = 1;
-  }
-  if (laz[i]) {
-    sum[l] += laz[i] * (mid - s + 1);
-    sum[l] %= mod;
-    sum[r] += laz[i] * (t - mid);
-    sum[r] %= mod;
-    laz[l] += laz[i];
-    laz[l] %= mod;
-    laz[r] += laz[i];
-    laz[r] %= mod;
-    laz[i] = 0;
-  }
-  return;
-}
-void build(int s, int t, int i) {
-  mul[i] = 1;
-  if (s == t) {
-    sum[i] = a[s];
-    return;
-  }
-  int mid = (s + t) >> 1;
-  build(s, mid, i << 1);
-  build(mid + 1, t, (i << 1) | 1);
-  up(i);
-}
-void chen(int l, int r, int s, int t, int i, ll z) {
-  int mid = (s + t) >> 1;
-  if (l <= s && t <= r) {
-    mul[i] *= z;
-    mul[i] %= mod;
-    laz[i] *= z;
-    laz[i] %= mod;
-    sum[i] *= z;
-    sum[i] %= mod;
-    return;
-  }
-  pd(i, s, t);
-  if (mid >= l) chen(l, r, s, mid, (i << 1), z);
-  if (mid + 1 <= r) chen(l, r, mid + 1, t, (i << 1) | 1, z);
-  up(i);
-}
-void add(int l, int r, int s, int t, int i, ll z) {
-  int mid = (s + t) >> 1;
-  if (l <= s && t <= r) {
-    sum[i] += z * (t - s + 1);
-    sum[i] %= mod;
-    laz[i] += z;
-    laz[i] %= mod;
-    return;
-  }
-  pd(i, s, t);
-  if (mid >= l) add(l, r, s, mid, (i << 1), z);
-  if (mid + 1 <= r) add(l, r, mid + 1, t, (i << 1) | 1, z);
-  up(i);
-}
-ll getans(int l, int r, int s, int t, int i) {
-  int mid = (s + t) >> 1;
-  ll tot = 0;
-  if (l <= s && t <= r) return sum[i];
-  pd(i, s, t);
-  if (mid >= l) tot += getans(l, r, s, mid, (i << 1));
-  tot %= mod;
-  if (mid + 1 <= r) tot += getans(l, r, mid + 1, t, (i << 1) | 1);
-  return tot % mod;
-}
-int main() {
-  int i, j, x, y, bh;
-  ll z;
-  n = read();
-  m = read();
-  mod = read();
-  for (i = 1; i <= n; i++) a[i] = read();
-  build(1, n, 1);
-  for (i = 1; i <= m; i++) {
-    bh = read();
-    if (bh == 1) {
-      x = read();
-      y = read();
-      z = read();
-      chen(x, y, 1, n, 1, z);
-    } else if (bh == 2) {
-      x = read();
-      y = read();
-      z = read();
-      add(x, y, 1, n, 1, z);
-    } else if (bh == 3) {
-      x = read();
-      y = read();
-      printf("%lld\n", getans(x, y, 1, n, 1));
+<img src="https://raw.githubusercontent.com/e-maxx-eng/e-maxx-eng/master/img/sum-segment-tree.png" alt="&quot;Sum Segment Tree&quot;" style="zoom: 67%;" />
+
+### Counstruction
+
+from the root vertex to the leaf vertices.  does the following:
+
+
+
+1. recursively construct the values of the two child vertices 递归地构造两个子顶点的值
+2. merge the computed values of these children.合并这些子节点的计算值
+
+The time complexity of this construction is O(n),
+
+
+
+```c
+int n, t[4*MAXN];
+void build(int a[], int v, int tl, int tr) {
+    if (tl == tr) {
+        t[v] = a[tl];
+    } else {
+        int tm = (tl + tr) / 2;
+        build(a, v*2, tl, tm);
+        build(a, v*2+1, tm+1, tr);
+        t[v] = t[v*2] + t[v*2+1];
     }
-  }
-  return 0;
 }
 ```
 
-### [HihoCoder 1078 线段树的区间修改](https://cn.vjudge.net/problem/HihoCoder-1078)
+So, we store the Segment Tree simply as an array t[] with a size of 4 times the input size n:
 
-??? "参考代码" ```cpp #include
+### Sum queries
 
-```c++
-int n, a[100005], d[270000], b[270000];
-void build(int l, int r, int p) {
-  if (l == r) {
-    d[p] = a[l];
-    return;
-  }
-  int m = (l + r) >> 1;
-  build(l, m, p << 1), build(m + 1, r, (p << 1) | 1);
-  d[p] = d[p << 1] + d[(p << 1) | 1];
+The procedure is illustrated in the following image. 该过程如下图所示
+
+Again the array a=[1,3,−2,8,−7] is used, and here we want to compute the sum $∑_{i=2}^4a[i]$. The colored 彩色vertices will be visited, and we will use the precomputed values of the green vertices. This gives us the result −2+1=−1.
+
+!["Sum Segment Tree Query"](https://raw.githubusercontent.com/e-maxx-eng/e-maxx-eng/master/img/sum-segment-tree-query.png)
+
+```c
+int sum(int v, int tl, int tr, int l, int r) { //i.e. the index v and the boundaries tl and tr information about the boundaries of the query, l and r
+    if (l > r) 
+        return 0;
+    if (l == tl && r == tr) {
+        return t[v];
+    }
+    int tm = (tl + tr) / 2;
+    return sum(v*2, tl, tm, l, min(r, tm))
+           + sum(v*2+1, tm+1, tr, max(l, tm+1), r);
 }
-void update(int l, int r, int c, int s, int t, int p) {
-  if (l <= s && t <= r) {
-    d[p] = (t - s + 1) * c, b[p] = c;
-    return;
-  }
-  int m = (s + t) >> 1;
-  if (b[p]) {
-    d[p << 1] = b[p] * (m - s + 1), d[(p << 1) | 1] = b[p] * (t - m);
-    b[p << 1] = b[(p << 1) | 1] = b[p];
-    b[p] = 0;
-  }
-  if (l <= m) update(l, r, c, s, m, p << 1);
-  if (r > m) update(l, r, c, m + 1, t, (p << 1) | 1);
-  d[p] = d[p << 1] + d[(p << 1) | 1];
+```
+
+### Update queries
+
+Now we want to modify a specific element in the array
+
+let's say we want to do the assignment a[i]=x
+
+
+
+It is easy to see, that the update request can be implemented using a recursive function. The function gets passed the current tree vertex, and it recursively calls itself with one of the two child vertices (the one that contains a[i] in its segment), and after that recomputes its sum value
+
+Again here is using the same array. Here we perform the update a[2]=3. The green vertices are the vertices that we visit and update.
+
+!["Sum Segment Tree Update"](https://raw.githubusercontent.com/e-maxx-eng/e-maxx-eng/master/img/sum-segment-tree-update.png)
+
+```c
+void update(int v, int tl, int tr, int pos, int new_val) {
+    if (tl == tr) {
+        t[v] = new_val;
+    } else {
+        int tm = (tl + tr) / 2;
+        if (pos <= tm)
+            update(v*2, tl, tm, pos, new_val);
+        else
+            update(v*2+1, tm+1, tr, pos, new_val);
+        t[v] = t[v*2] + t[v*2+1];
+    }
 }
-int getsum(int l, int r, int s, int t, int p) {
-  if (l <= s && t <= r) return d[p];
-  int m = (s + t) >> 1;
-  if (b[p]) {
-    d[p << 1] = b[p] * (m - s + 1), d[(p << 1) | 1] = b[p] * (t - m);
-    b[p << 1] = b[(p << 1) | 1] = b[p];
-    b[p] = 0;
-  }
-  int sum = 0;
-  if (l <= m) sum = getsum(l, r, s, m, p << 1);
-  if (r > m) sum += getsum(l, r, m + 1, t, (p << 1) | 1);
-  return sum;
+```
+
+## Advanced versions of Segment Trees
+
+#### Finding the maximum
+
+The tree will have exactly the same structure as the tree described above. 
+
+We only need to change the way t[v] is computed in the build and update functions. t[v] will now store the maximum of the corresponding segment. And we also need to change the calculation of the returned value of the sum function (replacing the summation by the maximum).
+
+#### Finding the maximum and the number of times it appears
+
+#### problem ：findind the maximum
+
+we store a pair of numbers at each vertex in the tree: In addition to the maximum we also store the number of occurrences of it in the corresponding segment. Determining the correct pair to store at t[v] can still be done in constant time using the information of the pairs stored at the child vertices. 
+
+Combining two such pairs should be done in a separate function, since this will be an operation that we will do while building the tree, while answering maximum queries and while performing modifications.
+
+```c
+pair<int, int> t[4*MAXN];
+
+pair<int, int> combine(pair<int, int> a, pair<int, int> b) {
+    if (a.first > b.first) 
+        return a;
+    if (b.first > a.first)
+        return b;
+    return make_pair(a.first, a.second + b.second);
 }
-int main() {
-  std::ios::sync_with_stdio(0);
-  std::cin >> n;
-  for (int i = 1; i <= n; i++) std::cin >> a[i];
-  build(1, n, 1);
-  int q, i1, i2, i3, i4;
-  std::cin >> q;
-  while (q--) {
-    std::cin >> i1 >> i2 >> i3;
-    if (i1 == 0)
-      std::cout << getsum(i2, i3, 1, n, 1) << endl;
+
+void build(int a[], int v, int tl, int tr) {
+    if (tl == tr) {
+        t[v] = make_pair(a[tl], 1);
+    } else {
+        int tm = (tl + tr) / 2;
+        build(a, v*2, tl, tm);
+        build(a, v*2+1, tm+1, tr);
+        t[v] = combine(t[v*2], t[v*2+1]);
+    }
+}
+
+pair<int, int> get_max(int v, int tl, int tr, int l, int r) {
+    if (l > r)
+        return make_pair(-INF, 0);
+    if (l == tl && r == tr)
+        return t[v];
+    int tm = (tl + tr) / 2;
+    return combine(get_max(v*2, tl, tm, l, min(r, tm)), 
+                   get_max(v*2+1, tm+1, tr, max(l, tm+1), r));
+}
+
+void update(int v, int tl, int tr, int pos, int new_val) {
+    if (tl == tr) {
+        t[v] = make_pair(new_val, 1);
+    } else {
+        int tm = (tl + tr) / 2;
+        if (pos <= tm)
+            update(v*2, tl, tm, pos, new_val);
+        else
+            update(v*2+1, tm+1, tr, pos, new_val);
+        t[v] = combine(t[v*2], t[v*2+1]);
+    }
+}
+```
+
+#### Compute the greatest common divisor / least common multiple
+
+#### problem：compute gcd/lcm 最大公约数/最小公倍数 
+
+#### in this problem, we want to compute the GCD / LCM of all numbers of given ranges of the array.
+
+To do this task, we will descend the Segment Tree, starting at the root vertex, and moving each time to either the left or the right child, depending on which segment contains the k-th zero. In order to decide to which child we need to go, it is enough to look at the number of zeros appearing in the segment corresponding to the left vertex. If this precomputed count is greater or equal to k, it is necessary to descend to the left child, and otherwise descent to the right child. Notice, if we chose the right child, we have to subtract the number of zeros of the left child from k.
+
+```c
+int find_kth(int v, int tl, int tr, int k) {
+    if (k > t[v])
+        return -1;
+    if (tl == tr)
+        return tl;
+    int tm = (tl + tr) / 2;
+    if (t[v*2] >= k)
+        return find_kth(v*2, tl, tm, k);
+    else 
+        return find_kth(v*2+1, tm+1, tr, k - t[v*2]);
+}
+```
+
+#### Searching for the first element greater than a given amount
+
+#### problem：The task is as follows: for a given value xx and a range a[l…r] find the smallest ii in the range a[l…r], such that a[i] is greater than x.
+
+```c
+int get_first(int v, int lv, int rv, int l, int r, int x) {
+    if(lv > r || rv < l) return -1;
+    if(l <= lv && rv <= r) {
+        if(t[v] <= x) return -1;
+        while(lv != rv) {
+            int mid = lv + (rv-lv)/2;
+            if(t[2*v] > x) {
+                v = 2*v;
+                rv = mid;
+            }else {
+                v = 2*v+1;
+                lv = mid+1;
+            }
+        }
+        return lv;
+    }
+
+    int mid = lv + (rv-lv)/2;
+    int rs = get_first(2*v, lv, mid, l, r, x);
+    if(rs != -1) return rs;
+    return get_first(2*v+1, mid+1, rv, l ,r, x);
+}
+```
+
+### Generalization to higher dimensions   **对更高维度的推广**
+
+A matrix a[0…n−1,0…m−1] is given, and we have to find the sum (or minimum/maximum) on some submatrix a[x1…x2,y1…y2], as well as perform modifications of individual单个 matrix elements (i.e. queries of the form a[x][y]=p).
+
+Here is the implementation of the construction of a 2D Segment Tree. It actually represents代表 two separate分开 blocks: the construction of a Segment Tree along the x coordinate （x 坐标） (buildx), and the y coordinate (buildy). For the leaf nodes in buildy we have to separate two cases:我们必须分离两种情况:  when the current segment of the first coordinate [tlx…trx] has length 1,当第一个坐标[ tlx... trx ]的当前段长度为1时，以及当它的长度大于1时 and when it has a length greater than one. In the first case, we just take the corresponding value from the matrix, and in the second case we can combine the values of two Segment Trees from the left and the right son in the coordinate x.我们只需要从矩阵中取得相应的值，在第二种情况下，我们可以在坐标 x 中合并两个从左边和右边的段树的值。
+
+```c
+void build_y(int vx, int lx, int rx, int vy, int ly, int ry) {
+    if (ly == ry) {
+        if (lx == rx)
+            t[vx][vy] = a[lx][ly];
+        else
+            t[vx][vy] = t[vx*2][vy] + t[vx*2+1][vy];
+    } else {
+        int my = (ly + ry) / 2;
+        build_y(vx, lx, rx, vy*2, ly, my);
+        build_y(vx, lx, rx, vy*2+1, my+1, ry);
+        t[vx][vy] = t[vx][vy*2] + t[vx][vy*2+1];
+    }
+}
+
+void build_x(int vx, int lx, int rx) {
+    if (lx != rx) {
+        int mx = (lx + rx) / 2;
+        build_x(vx*2, lx, mx);
+        build_x(vx*2+1, mx+1, rx);
+    }
+    build_y(vx, lx, rx, 1, 0, m-1);
+}
+
+
+```
+
+```c
+int sum_y(int vx, int vy, int tly, int try_, int ly, int ry) {
+    if (ly > ry) 
+        return 0;
+    if (ly == tly && try_ == ry)
+        return t[vx][vy];
+    int tmy = (tly + try_) / 2;
+    return sum_y(vx, vy*2, tly, tmy, ly, min(ry, tmy))
+         + sum_y(vx, vy*2+1, tmy+1, try_, max(ly, tmy+1), ry);
+}
+
+int sum_x(int vx, int tlx, int trx, int lx, int rx, int ly, int ry) {
+    if (lx > rx)
+        return 0;
+    if (lx == tlx && trx == rx)
+        return sum_y(vx, 1, 0, m-1, ly, ry);
+    int tmx = (tlx + trx) / 2;
+    return sum_x(vx*2, tlx, tmx, lx, min(rx, tmx), ly, ry)
+         + sum_x(vx*2+1, tmx+1, trx, max(lx, tmx+1), rx, ly, ry);
+}
+```
+
+this fountion work in  O(logn logm)
+
+#### Update
+
+```c
+void update_y(int vx, int lx, int rx, int vy, int ly, int ry, int x, int y, int new_val) {
+    if (ly == ry) {
+        if (lx == rx)
+            t[vx][vy] = new_val;
+        else
+            t[vx][vy] = t[vx*2][vy] + t[vx*2+1][vy];
+    } else {
+        int my = (ly + ry) / 2;
+        if (y <= my)
+            update_y(vx, lx, rx, vy*2, ly, my, x, y, new_val);
+        else
+            update_y(vx, lx, rx, vy*2+1, my+1, ry, x, y, new_val);
+        t[vx][vy] = t[vx][vy*2] + t[vx][vy*2+1];
+    }
+}
+
+void update_x(int vx, int lx, int rx, int x, int y, int new_val) {
+    if (lx != rx) {
+        int mx = (lx + rx) / 2;
+        if (x <= mx)
+            update_x(vx*2, lx, mx, x, y, new_val);
+        else
+            update_x(vx*2+1, mx+1, rx, x, y, new_val);
+    }
+    update_y(vx, lx, rx, 1, 0, m-1, x, y, new_val);
+}
+```
+
+### Preserving the history of its values (Persistent Segment Tree) 持久化线段树
+
+```c
+struct Vertex {
+    Vertex *l, *r;
+    int sum;
+
+    Vertex(int val) : l(nullptr), r(nullptr), sum(val) {}
+    Vertex(Vertex *l, Vertex *r) : l(l), r(r), sum(0) {
+        if (l) sum += l->sum;
+        if (r) sum += r->sum;
+    }
+};
+
+Vertex* build(int a[], int tl, int tr) {
+    if (tl == tr)
+        return new Vertex(a[tl]);
+    int tm = (tl + tr) / 2;
+    return new Vertex(build(a, tl, tm), build(a, tm+1, tr));
+}
+
+int get_sum(Vertex* v, int tl, int tr, int l, int r) {
+    if (l > r)
+        return 0;
+    if (l == tl && tr == r)
+        return v->sum;
+    int tm = (tl + tr) / 2;
+    return get_sum(v->l, tl, tm, l, min(r, tm))
+         + get_sum(v->r, tm+1, tr, max(l, tm+1), r);
+}
+
+Vertex* update(Vertex* v, int tl, int tr, int pos, int new_val) {
+    if (tl == tr)
+        return new Vertex(new_val);
+    int tm = (tl + tr) / 2;
+    if (pos <= tm)
+        return new Vertex(update(v->l, tl, tm, pos, new_val), v->r);
     else
-      std::cin >> i4, update(i2, i3, i4, 1, n, 1);
-  }
-  return 0;
+        return new Vertex(v->l, update(v->r, tm+1, tr, pos, new_val));
 }
-​```
 ```
 
-### [2018 Multi-University Training Contest 5 Problem G. Glad You Came](http://acm.hdu.edu.cn/showproblem.php?pid=6356)
-
-维护一下每个区间的永久标记就可以了，最后在线段树上跑一边 dfs 统计结果即可。注意打标记的时候加个剪枝优化，否则会 T。
-
-## 拓展 - 猫树
-
-众所周知线段树可以支持高速查询某一段区间的信息和，比如区间最大子段和，区间和，区间矩阵的连乘积等等。
-
-但是有一个问题在于普通线段树的区间询问在某些毒瘤的眼里可能还是有些慢了。
-
-简单来说就是线段树建树的时候需要做 $O(n)$ 次合并操作，而每一次区间询问需要做 $O(\log{n})$ 次合并操作，询问区间和这种东西的时候还可以忍受，但是当我们需要询问区间线性基这种合并复杂度高达 $O(\log^2{w})$ 的信息的话，此时就算是做 $O(\log{n})$ 次合并有些时候在时间上也是不可接受的。
-
-而所谓 "猫树" 就是一种不支持修改，仅仅支持快速区间询问的一种静态线段树。
-
-构造一棵这样的静态线段树需要 $O(n\log{n})$ 次合并操作，但是此时的查询复杂度被加速至 $O(1)$ 次合并操作。
-
-在处理线性基这样特殊的信息的时候甚至可以将复杂度降至 $O(n\log^2{w})$ 。
-
-### 原理
-
-在查询 $[l,r]$ 这段区间的信息和的时候，将线段树树上代表 $[l,l]$ 的节点和代表 $[r,r]$ 这段区间的节点在线段树上的 lca 求出来，设这个节点 $p$ 代表的区间为 $[L,R]$ ，我们会发现一些非常有趣的性质：
-
-**1. $[L,R]$ 这个区间一定包含 $[l,r]$ **
-
-显然，因为它既是 $l$ 的祖先又是 $r$ 的祖先。
-
-**2. $[l,r]$ 这个区间一定跨越 $[L,R]$ 的中点**
-
-由于 $p$ 是 $l$ 和 $r$ 的 lca，这意味着 $p$ 的左儿子是 $l$ 的祖先而不是 $r$ 的祖先， $p$ 的右儿子是 $r$ 的祖先而不是 $l$ 的祖先。
-
-因此 $l$ 一定在 $[L,MID]$ 这个区间内， $r$ 一定在 $(MID,R]$ 这个区间内。
-
-有了这两个性质，我们就可以将询问的复杂度降至 $O(1)$ 了。
-
-### 实现
-
-具体来讲我们建树的时候对于线段树树上的一个节点，设它代表的区间为 $(l,r]$ 。
-
-不同于传统线段树在这个节点里只保留 $[l,r]$ 的和，我们在这个节点里面额外保存 $(l,mid]$ 的后缀和数组和 $(mid,r]$ 的前缀和数组。
-
-这样的话建树的复杂度为 $T(n)=2T(n/2)+O(n)=O(n\log{n})$ 同理空间复杂度也从原来的 $O(n)$ 变成了 $O(n\log{n})$ 。
-
-下面是最关键的询问了~
-
-如果我们询问的区间是 $[l,r]$ 那么我们把代表 $[l,l]$ 的节点和代表 $[r,r]$ 的节点的 lca 求出来，记为 $p$ 。
-
-根据刚才的两个性质， $l,r$ 在 $p$ 所包含的区间之内并且一定跨越了 $p$ 的中点。
-
-这意味这一个非常关键的事实是我们可以使用 $p$ 里面的前缀和数组和后缀和数组，将 $[l,r]$ 拆成 $[l,mid]+(mid,r]$ 从而拼出来 $[l,r]$ 这个区间。
-
-而这个过程仅仅需要 $O(1)$ 次合并操作！
-
-不过我们好像忽略了点什么？
-
-似乎求 lca 的复杂度似乎还不是 $O(1)$ ，暴力求是 $O(\log{n})$ 的，倍增法则是 $O(\log{\log{n}})$ 的，转 ST 表的代价又太大……
-
-### 堆式建树
-
-具体来将我们将这个序列补成 2 的整次幂，然后建线段树。
-
-此时我们发现线段树上两个节点的 lca 编号，就是两个节点二进制编号的 lcp。
-
-稍作思考即可发现发现在 $x$ 和 $y$ 的二进制下 `lcp(x,y)=x>>log[x^y]` 。
-
-所以我们预处理一个 `log` 数组即可轻松完成求 lca 的工作。
-
-这样我们就完成了一个猫树。
-
-由于建树的时候涉及到求前缀和和求后缀和，所以对于线性基这种虽然合并是 $O(\log^2{w})$ 但是求前缀和却是 $O(n\log{n})$ 的信息，使用猫树可以将静态区间线性基从 $O(n\log^2{w}+m\log^2{w}\log{n})$ 优化至 $O(n\log{n}\log{w}+m\log^2{w})$ 的复杂度。
-
-### 参考
-
-[immortalCO 大爷的博客](https://immortalco.blog.uoj.ac/blog/2102)
