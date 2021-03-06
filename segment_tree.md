@@ -12,7 +12,7 @@
 
 We have an array a[0…n−1], 
 
-and the Segment Tree must be able to find the sum of elements between the indices ll and rr (i.e. computing the sum $∑_{ri}^l= a[i]$)
+and the Segment Tree must be able to find the sum of elements between the indices l and r (i.e. computing the sum $∑_{ri}^l= a[i]$)
 
 <img src="https://raw.githubusercontent.com/e-maxx-eng/e-maxx-eng/master/img/sum-segment-tree.png" alt="&quot;Sum Segment Tree&quot;" style="zoom: 67%;" />
 
@@ -47,6 +47,26 @@ So, we store the Segment Tree simply as an array t[] with a size of 4 times the 
 
 ### Sum queries
 
+There are three possible cases.
+
+1.The easiest case is when the segment a[l…r] is equal to the corresponding segment of the current vertex (i.e. a[l…r]=a[tl…tr]).then we are finished and can return the precomputed sum that is stored in the vertex.
+
+2.the segment of the query can fall completely into the domain of either the left or the right child.
+
+3.And then there is the last case, the query segment intersects with both children. In this case we have no other option as to make two recursive calls, one for each child. First we go to the left child, compute a partial answer for this vertex (i.e. the sum of values of the intersection between the segment of the query and the segment of the left child), then go to the right child, compute the partial answer using that vertex, and then combine the answers by adding them.
+
+So processing a sum query is a function that recursively calls
+
+And the recursion ends, whenever the boundaries of the current query segment coincides with the boundaries of the segment of the current vertex
+
+
+
+##### complexity of this algorithm O(logn)
+
+
+
+
+
 The procedure is illustrated in the following image. 该过程如下图所示
 
 Again the array a=[1,3,−2,8,−7] is used, and here we want to compute the sum $∑_{i=2}^4a[i]$. The colored 彩色vertices will be visited, and we will use the precomputed values of the green vertices. This gives us the result −2+1=−1.
@@ -68,7 +88,7 @@ int sum(int v, int tl, int tr, int l, int r) { //i.e. the index v and the bounda
 
 ### Update queries
 
-Now we want to modify a specific element in the array
+#### problem:Now we want to modify a specific element in the array
 
 let's say we want to do the assignment a[i]=x
 

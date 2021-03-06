@@ -29,7 +29,7 @@ So, we have calculated the values of b[k] (this required O(n) operations). How c
 
 所以，我们已经计算出了b[k]的值（这需要O(n)次操作）。它们如何帮助我们回答每个查询l,r ? 
 
-Notice that if the interval [l,r][l,r] is long enough, it will contain several whole blocks, and for those blocks we can find the sum of elements in them in a single operation. As a result, the interval [l,r][l,r] will contain parts of only two blocks, and we'll have to calculate the sum of elements in these parts trivially.请注意，如果区间l,r足够长，它将包含几个完整的区块，对于这些区块，我们可以在一次操作中找到其中元素的和。因此，区间l,r将只包含两个区块的部分，我们必须琐碎地计算这些部分的元素之和。
+ Notice that if the interval [l,r][l,r] is long enough, it will contain several whole blocks, and for those blocks we can find the sum of elements in them in a single operation. As a result, the interval [l,r][l,r] will contain parts of only two blocks, and we'll have to calculate the sum of elements in these parts trivially.请注意，如果区间l,r足够长，它将包含几个完整的区块，对于这些区块，我们可以在一次操作中找到其中元素的和。因此，区间l,r将只包含两个区块的部分，我们必须琐碎地计算这些部分的元素之和。
 
 <img src="平方根分解.assets/image-20210210110239070.png" alt="image-20210210110239070" style="zoom:50%;" />
 

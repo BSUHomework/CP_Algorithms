@@ -54,10 +54,10 @@ void preprocess(int input[], int n) {
   // building the decomposed array
   for (int i = 0; i < n; i++) {
     arr[i] = input[i];
-    cout << "n :" << n << endl;
-    cout << "i :" << i << endl;
-    cout << "blk_sz :" << blk_sz << endl;
-    cout << "blk_idx :" << i % blk_sz << endl;
+    // cout << "n :" << n << endl;
+    // cout << "i :" << i << endl;
+    // cout << "blk_sz :" << blk_sz << endl;
+    // cout << "blk_idx :" << i % blk_sz << endl;
     if (i % blk_sz == 0) {
       // entering next block
       // incementing block pointer
@@ -79,7 +79,7 @@ int main() {
   cout << "n : " << n << endl;
   preprocess(input, n);
 
-  //   cout << "query(3,8) : " << query(3, 8) << endl;
+  cout << "query(3,6) : " << query(3, 6) << endl;
   //   cout << "query(1,6) : " << query(1, 6) << endl;
   //   update(8, 0);
   //   cout << "query(8,8) : " << query(8, 1) << endl;
